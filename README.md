@@ -14,3 +14,5 @@ CUDA is required.
 To use the CRC calc, add the CRC calc effect to an adjustment clip above the lighting data clips. Adjust the size of the MDMX blade in the settings (usually 1920 px)
 
 To use the fixture generator, add the fixture generator effect to your timeline. Load a fixture json file from the `mdmx-ofx-fixtures/fixtures` folder or make your own by referencing those files. More information on the json structure there can be found in the [source code](https://github.com/valuef/mdmx-davinci/blob/master/mdmx-ofx-fixtures/ofx.cpp) (search for `struct Fixture` and `parse_fixture_json`)
+
+Also try [VideoRemap](https://videoremap.com) if you need to use Resolume advanced output in Davinci!
