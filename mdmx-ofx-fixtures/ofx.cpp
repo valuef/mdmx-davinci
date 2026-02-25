@@ -55,7 +55,6 @@ extern "C" void blit_dmx_line(
 #if !defined(SHIPPING)
   #define PLUGIN_MAJOR 1
   #define PLUGIN_MINOR 0
-  #define PLUGIN_PATCH 0
 
   #define PLUGIN_BASE_NAME "MDMX Fixture dev"
   #define PLUGIN_ID_BASE "gay.value.mdmx_fixture_dev"
@@ -63,11 +62,14 @@ extern "C" void blit_dmx_line(
   #define PLUGIN_ID PLUGIN_ID_BASE
   #define PLUGIN_NAME PLUGIN_BASE_NAME
 #else
+  #define PLUGIN_MAJOR 1
+  #define PLUGIN_MINOR 0
+
   #define PLUGIN_BASE_NAME "MDMX Fixture"
   #define PLUGIN_ID_BASE "gay.value.mdmx_fixture"
 
   #define PLUGIN_ID PLUGIN_ID_BASE TO_STR(PLUGIN_MAJOR)
-  #define PLUGIN_NAME PLUGIN_BASE_NAME " v" TO_STR(PLUGIN_MAJOR) "." TO_STR(PLUGIN_MINOR) "." TO_STR(PLUGIN_PATCH)
+  #define PLUGIN_NAME PLUGIN_BASE_NAME " v" TO_STR(PLUGIN_MAJOR) "." TO_STR(PLUGIN_MINOR)
 #endif
 
 #define LPLUGIN_NAME WIDEN(PLUGIN_NAME)

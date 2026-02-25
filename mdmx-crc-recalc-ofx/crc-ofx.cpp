@@ -39,21 +39,23 @@ extern "C" void recalc_crc(
 #define WIDEN(x) WIDEN2(x)
 
 #if !defined(SHIPPING)
-#define PLUGIN_MAJOR 1
-#define PLUGIN_MINOR 0
-#define PLUGIN_PATCH 0
+  #define PLUGIN_MAJOR 1
+  #define PLUGIN_MINOR 0
 
-#define PLUGIN_BASE_NAME "MDMX CRC dev"
-#define PLUGIN_ID_BASE "gay.value.mdmx_crc_dev"
+  #define PLUGIN_BASE_NAME "MDMX CRC dev"
+  #define PLUGIN_ID_BASE "gay.value.mdmx_crc_dev"
 
-#define PLUGIN_ID PLUGIN_ID_BASE
-#define PLUGIN_NAME PLUGIN_BASE_NAME
+  #define PLUGIN_ID PLUGIN_ID_BASE
+  #define PLUGIN_NAME PLUGIN_BASE_NAME
 #else
-#define PLUGIN_BASE_NAME "MDMX CRC"
-#define PLUGIN_ID_BASE "gay.value.mdmx_crc"
+  #define PLUGIN_MAJOR 1
+  #define PLUGIN_MINOR 0
 
-#define PLUGIN_ID PLUGIN_ID_BASE TO_STR(PLUGIN_MAJOR)
-#define PLUGIN_NAME PLUGIN_BASE_NAME " v" TO_STR(PLUGIN_MAJOR) "." TO_STR(PLUGIN_MINOR) "." TO_STR(PLUGIN_PATCH)
+  #define PLUGIN_BASE_NAME "MDMX CRC"
+  #define PLUGIN_ID_BASE "gay.value.mdmx_crc"
+
+  #define PLUGIN_ID PLUGIN_ID_BASE TO_STR(PLUGIN_MAJOR)
+  #define PLUGIN_NAME PLUGIN_BASE_NAME " v" TO_STR(PLUGIN_MAJOR) "." TO_STR(PLUGIN_MINOR)
 #endif
 
 #define LPLUGIN_NAME WIDEN(PLUGIN_NAME)
