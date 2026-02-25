@@ -1,0 +1,32 @@
+{
+  "id" : "SF3 - Clouds - 2025 V1",
+  "controls": [
+    { "name": "Enable", "type": "float", "channel": 1 },
+
+    { 
+      "name": "Light Color", 
+      "type": "rgb",
+
+      "red_channel": 3,
+      "green_channel": 4,
+      "blue_channel": 5,
+
+      "default_color": { "r": 55, "g": 77, "b": 144 }
+    },
+
+    { 
+      "name": "Dark Color", 
+      "type": "rgb",
+
+      "red_channel": 6,
+      "green_channel": 7,
+      "blue_channel": 8,
+
+      "default_color": { "r": 7, "g": 9, "b": 17 }
+    },
+
+    { "name": "Video Map Intensity", "type": "float", "channel": 9 },
+    { "name": "Depth Map Intensity", "type": "float", "channel": 10 },
+    { "name": "Depth Offset", "type": "float", "channel": 11 }
+  ]
+}

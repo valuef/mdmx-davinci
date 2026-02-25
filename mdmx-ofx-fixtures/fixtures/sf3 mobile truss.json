@@ -1,0 +1,41 @@
+{
+  "id" : "SF3 - Mobile Truss - 2025 V1",
+  "controls": [
+    { 
+      "name": "Position", 
+      "type": "pos_xyz_16", 
+
+      "display_min": -800, 
+      "display_max": 800,
+
+      "x_channel": 1,
+      "x_fine_channel": 2,
+
+      "y_channel": 3,
+      "y_fine_channel": 4,
+
+      "z_channel": 5,
+      "z_fine_channel": 6
+    },
+
+    { 
+      "name": "Rotation", 
+      "type": "euler_xyz_16", 
+
+      "display_min": 0, 
+      "display_max": 540,
+
+      "x_channel": 7,
+      "x_fine_channel": 8,
+
+      "y_channel": 9,
+      "y_fine_channel": 10,
+
+      "z_channel": 11,
+      "z_fine_channel": 12
+    },
+
+    { "name": "Fixture Offset (unimpl)", "type": "float", "channel": 13 },
+    { "name": "FX Selector", "type": "float", "channel": 14 }
+  ]
+}

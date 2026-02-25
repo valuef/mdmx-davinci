@@ -1,0 +1,32 @@
+{
+  "id" : "SF3 - Gobo Spot - 2025 V1",
+  "controls": [
+    { 
+      "name": "Pan/Tilt", 
+      "type": "pan_tilt_16",
+
+      "display_min": 0,
+      "display_max": 540,
+
+      "x_channel": 1,
+      "x_fine_channel": 2,
+
+      "y_channel": 3,
+      "y_fine_channel": 4
+    },
+    { "name": "Zoom", "type": "float", "channel": 5 },
+    { "name": "Dimmer", "type": "float", "channel": 6 },
+    { "name": "Strobe", "type": "float", "channel": 7 },
+    { 
+      "name": "Color", 
+      "type": "rgb",
+
+      "red_channel": 8,
+      "green_channel": 9,
+      "blue_channel": 10
+    },
+    { "name": "Gobo Spin Speed", "type": "float", "channel": 11 },
+    { "name": "Gobo", "type": "float", "channel": 12 },
+    { "name": "Mover Speed", "type": "float", "channel": 13 }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "id" : "Single Byte",
+  "controls": [
+    { 
+      "name": "Value", 
+      "type": "float", 
+      "channel": 1,
+      "display_min": 0,
+      "display_max": 255
+    }
+  ]
+}

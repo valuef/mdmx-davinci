@@ -1,0 +1,12 @@
+{
+  "id" : "SF3 - DJ Screen - 2025 V1",
+
+  "controls": [
+    { "name": "Enable", "type": "float", "channel": 1 },
+
+    { "name": "DJ Screen Fadeout", "type": "float", "channel": 3 },
+    { "name": "DJ Screen additive", "type": "float", "channel": 4 },
+    { "name": "DJ Screen Edge fade", "type": "float", "channel": 5 },
+    { "name": "DJ Screen Freeze", "type": "float", "channel": 6 }
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "id" : "SF3 - Truss FX - 2025 V1",
+  "controls": [
+    { "name": "FX Selector", "type": "float", "channel": 1 },
+    { "name": "FX Mod", "type": "float", "channel": 2 }
+  ]
+}

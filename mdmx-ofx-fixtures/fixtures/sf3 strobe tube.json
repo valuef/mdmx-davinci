@@ -1,0 +1,42 @@
+{
+  "id" : "SF3 - Strobe Tube - 2025 V1",
+  "controls": [
+    { 
+      "name": "Color",        
+      "type": "rgb", 
+
+      "red_channel": 1,
+      "green_channel": 2,
+      "blue_channel": 3,
+
+      "default_color": { "r": 255, "g": 255, "b": 255 }
+    },
+
+    { "name": "FX Selector",  "type": "float", "channel": 4 },
+    { "name": "FX Spin",      "type": "float", "channel": 5 },
+
+    { "name": "1 - Dimmer", "type": "float", "channel": 6 },
+    { "name": "1 - Strobe", "type": "float", "channel": 7 },
+
+    { "name": "2 - Dimmer", "type": "float", "channel": 8 },
+    { "name": "2 - Strobe", "type": "float", "channel": 9 },
+
+    { "name": "3 - Dimmer", "type": "float", "channel": 10 },
+    { "name": "3 - Strobe", "type": "float", "channel": 11 },
+
+    { "name": "4 - Dimmer", "type": "float", "channel": 12 },
+    { "name": "4 - Strobe", "type": "float", "channel": 13 },
+
+    { "name": "5 - Dimmer", "type": "float", "channel": 14 },
+    { "name": "5 - Strobe", "type": "float", "channel": 15 },
+
+    { "name": "6 - Dimmer", "type": "float", "channel": 16 },
+    { "name": "6 - Strobe", "type": "float", "channel": 17 },
+
+    { "name": "7 - Dimmer", "type": "float", "channel": 18 },
+    { "name": "7 - Strobe", "type": "float", "channel": 19 },
+
+    { "name": "8 - Dimmer", "type": "float", "channel": 20 },
+    { "name": "8 - Strobe", "type": "float", "channel": 21 }
+  ]
+}

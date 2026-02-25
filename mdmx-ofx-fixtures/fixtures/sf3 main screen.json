@@ -1,0 +1,16 @@
+{
+  "id" : "SF3 - Main Screen - 2025 V1",
+  "controls": [
+    { "name": "Enable", "type": "float", "channel": 1 },
+
+    { "name": "Fade Out", "type": "float", "channel": 3 },
+    { "name": "Additive", "type": "float", "channel": 4 },
+    { "name": "Edge Fade", "type": "float", "channel": 5 },
+    { "name": "Center", "type": "float", "channel": 6 },
+    { "name": "LOMG", "type": "float", "channel": 7 },
+    { "name": "Bloom", "type": "float", "channel": 8 },
+    { "name": "16:9", "type": "float", "channel": 9 },
+    { "name": "Flip Opposide Side", "type": "float", "channel": 10 },
+    { "name": "Split screen (360 w lomg)", "type": "float", "channel": 11 }
+  ]
+}

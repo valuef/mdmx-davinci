@@ -1,0 +1,20 @@
+{
+  "id" : "SF3 - Misc - 2025 V1",
+
+  "controls": [
+    { "name": "Enable", "type": "float", "channel": 1 },
+
+    { "name": "Enable Drone Map", "type": "float", "channel": 3 },
+    { "name": "Delete World", "type": "float", "channel": 4 },
+
+    { "name": "HAM Particle Mode", "type": "float", "channel": 5 },
+    { "name": "HAM Color Smoothing Speed", "type": "float", "channel": 6 },
+    { "name": "HAM Depth Smoothing Speed", "type": "float", "channel": 7 },
+    { "name": "HAM Bias Smoothing Speed", "type": "float", "channel": 8 },
+
+    { "name": "Monolith Riser", "type": "float", "channel": 13 },
+    { "name": "Tree Grow", "type": "float", "channel": 14 },
+    { "name": "Water Level", "type": "float", "channel": 15 },
+    { "name": "Truss Binder Animation", "type": "float", "channel": 16 }
+  ]
+}

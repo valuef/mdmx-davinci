@@ -1,0 +1,16 @@
+{
+  "id" : "SF3 - Drakes Breath - 2025 V1",
+  "controls": [
+    { 
+      "name": "Tilt", 
+      "type": "float", 
+      "channel": 1,
+
+      "display_min": -90,
+      "display_max": 90
+    },
+
+    { "name": "FX Selector", "type": "float", "channel": 2 },
+    { "name": "FX Mod", "type": "float", "channel": 3 }
+  ]
+}

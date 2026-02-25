@@ -1,0 +1,8 @@
+{
+  "id" : "Test",
+  "channels": [
+    { "name": "My Float", "type": "float" },
+    { "name": "My Color", "type": "rgb" },
+    { "name": "My Float two!", "type": "float" }
+  ]
+}

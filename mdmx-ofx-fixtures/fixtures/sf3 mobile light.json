@@ -1,0 +1,21 @@
+{
+  "id" : "SF3 - Mobile Light - 2025 V1",
+  "controls": [
+    { 
+      "name": "Position", 
+      "type": "pos_xyz_16", 
+
+      "display_min": -800, 
+      "display_max": 800,
+
+      "x_channel": 1,
+      "x_fine_channel": 2,
+
+      "y_channel": 3,
+      "y_fine_channel": 4,
+
+      "z_channel": 5,
+      "z_fine_channel": 6
+    }
+  ]
+}

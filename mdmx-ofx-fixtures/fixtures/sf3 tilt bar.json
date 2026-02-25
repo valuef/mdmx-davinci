@@ -1,0 +1,25 @@
+{
+  "id" : "SF3 - Tilt Bar - 2025 V1",
+
+  "controls": [
+    { "name": "Dimmer", "type": "float", "channel": 1},
+
+    { 
+      "name": "Color", 
+      "type": "rgb",
+      "red_channel": 2,
+      "green_channel": 3,
+      "blue_channel": 4
+    },
+
+    { "name": "Strobe", "type": "float", "channel": 5 },
+
+    { 
+      "name": "Tilt", 
+      "type": "float",
+      "display_min": -90,
+      "display_max": 90,
+      "channel": 6
+    }
+  ]
+}

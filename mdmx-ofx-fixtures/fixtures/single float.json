@@ -1,0 +1,6 @@
+{
+  "id" : "Single Float",
+  "controls": [
+    { "name": "Float", "type": "float", "channel": 1 }
+  ]
+}

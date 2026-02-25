@@ -1,0 +1,8 @@
+{
+  "id" : "SF3 - Cob Blinder - 2025 V1",
+  "controls": [
+    { "name": "Dimmer 1", "type": "float", "channel": 1},
+    { "name": "Dimmer 2", "type": "float", "channel": 2},
+    { "name": "Strobe", "type": "float", "channel": 3}
+  ]
+}

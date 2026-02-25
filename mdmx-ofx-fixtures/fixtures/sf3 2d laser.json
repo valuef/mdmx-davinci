@@ -1,0 +1,50 @@
+{
+  "id" : "SF3 - 2D Laser - 2025 V1",
+  "controls": [
+    { 
+      "name": "Pan Tilt", 
+      "type": "pan_tilt_16",
+
+      "display_min": 0, 
+      "display_max": 120,
+
+      "x_channel": 1, 
+      "x_fine_channel": 2, 
+      "y_channel": 3, 
+      "y_fine_channel": 4
+    },
+
+    { "name": "Width",        "type": "float", "channel": 5 },
+    { "name": "Dimmer",       "type": "float", "channel": 6 },
+    { "name": "Strobe",       "type": "float", "channel": 7 },
+
+    { 
+      "name": "Color",
+      "type": "rgb",
+      "red_channel": 8,
+      "green_channel": 9,
+      "blue_channel": 10
+    },
+
+    { "name": "Spin Speed",   "type": "float", "channel": 11 },
+    { "name": "Spin Index",   "type": "float", "channel": 12 },
+    { "name": "Moved Speed",  "type": "float", "channel": 13 },
+    { "name": "Snap Force",   "type": "float", "channel": 14 },
+
+    { "name": "Animate",  "type": "float", "channel": 15 },
+    { "name": "Sine",     "type": "float", "channel": 16 },
+    { "name": "Circle",   "type": "float", "channel": 17 },
+    { "name": "Square",   "type": "float", "channel": 18 },
+    { "name": "Triangle", "type": "float", "channel": 19 },
+
+    { "name": "Video Map Selection",  "type": "float", "channel": 20 },
+    { "name": "Blade Scrolling",      "type": "float", "channel": 21 },
+
+    { "name": "Hue Rotate Animation", "type": "float", "channel": 22 },
+    { "name": "Hue Shift",            "type": "float", "channel": 23 },
+    { "name": "Edge Hue",             "type": "float", "channel": 24 },
+
+    { "name": "Blade Size",   "type": "float", "channel": 25 },
+    { "name": "Blade Space",  "type": "float", "channel": 26 }
+  ]
+}
