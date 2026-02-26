@@ -131,6 +131,9 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <PostBuildEvent>
+      <Command>xcopy "$(TargetPath)" "C:\Program Files\Common Files\OFX\Plugins\MDMX_Fixture.ofx.bundle\Contents\Win64\MDMX_Fixture.ofx*" /Y /R</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="json-read.cpp" />

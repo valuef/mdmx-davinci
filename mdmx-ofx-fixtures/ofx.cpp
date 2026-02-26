@@ -63,7 +63,7 @@ extern "C" void blit_dmx_line(
   #define PLUGIN_NAME PLUGIN_BASE_NAME
 #else
   #define PLUGIN_MAJOR 1
-  #define PLUGIN_MINOR 0
+  #define PLUGIN_MINOR 1
 
   #define PLUGIN_BASE_NAME "MDMX Fixture"
   #define PLUGIN_ID_BASE "gay.value.mdmx_fixture"
@@ -254,10 +254,14 @@ enable_double_param(
   ofx_set_label(props, name);
 
   if(control->has_display_min_max) {
-    ofx_set_min_value_double(props, control->display_min);
+    // NOTE(valuef): We don't want to set the min/max value as there will be situations where the nth control on fixture A has a range [0;1] and nth control on B has range [-1;1]. Whichever
+    // fixture hits the keyframe system first will imprint the min/max into the system for the plugin type and we won't be able to change it.
+    // Thankfully the animation system doesn't care about display min/max.
+    // 2026-02-27
+    //ofx_set_min_value_double(props, control->display_min);
     ofx_set_min_display_double(props, control->display_min);
 
-    ofx_set_max_value_double(props, control->display_max);
+    //ofx_set_max_value_double(props, control->display_max);
     ofx_set_max_display_double(props, control->display_max);
   }
 
@@ -273,10 +277,10 @@ reset_double_param(
 ) {
   ofx_set_is_secret(props, true);
 
-  ofx_set_min_value_double(props, 0);
+  //ofx_set_min_value_double(props, 0);
   ofx_set_min_display_double(props, 0);
 
-  ofx_set_max_value_double(props, 1);
+  //ofx_set_max_value_double(props, 1);
   ofx_set_max_display_double(props, 1);
 
   ofx_set_default_double(props, 0);
@@ -727,6 +731,17 @@ double clamp_d(
   return x;
 }
 
+static inline
+int clamp_i(
+  int x,
+  int min_value,
+  int max_value
+) {
+  if (x > max_value) return max_value;
+  if (min_value > x) return min_value;
+  return x;
+}
+
 #define saturate_d(x) clamp_d(x, 0, 1)
 
 static
@@ -984,7 +999,6 @@ ofx_main(
           suite_param->paramGetValueAtTime(plugin->params[i].f32_1.handle, time, &value);
 
           encode_double_as_8(control->channel, value, control, buf, buf_size);
-
         } while(0);
         else if(control->type == Fixture::Control::Type::rgb) do {
           if(!is_valid_array_index(control->red_channel, buf_size)) break;
@@ -1067,9 +1081,12 @@ ofx_main(
     }
 
     int dmx_universe = 1;
-    OFX_CHECK(suite_param->paramGetValueAtTime(plugin->p_dmx_universe.handle, time, &dmx_universe));
+    OFX_CHECK(suite_param->paramGetValue(plugin->p_dmx_universe.handle, &dmx_universe));
     int dmx_channel = 1;
-    OFX_CHECK(suite_param->paramGetValueAtTime(plugin->p_dmx_channel.handle, time, &dmx_channel));
+    OFX_CHECK(suite_param->paramGetValue(plugin->p_dmx_channel.handle, &dmx_channel));
+
+    dmx_universe = clamp_i(dmx_universe, 1, 8);
+    dmx_channel  = clamp_i(dmx_channel, 1, 512);
 
     auto grid_channel = ((dmx_universe - 1) * 512) + (dmx_channel - 1);
 
@@ -1300,24 +1317,24 @@ ofx_main(
     {
       OFX_CHECK(suite_param->paramDefine(params_set, kOfxParamTypeInteger, PARAM_DMX_UNIVERSE, &param_props));
       ofx_set_label(param_props, "DMX Universe");
-      ofx_set_animates(param_props, true);
+      ofx_set_animates(param_props, false);
       ofx_set_evaluate_on_change(param_props, true);
       ofx_set_group(param_props, GROUP_FIXTURE);
-      ofx_set_min_value_int(param_props, 1);
+      //ofx_set_min_value_int(param_props, 1);
       ofx_set_min_display_int(param_props, 1);
-      ofx_set_max_value_int(param_props, 8);
+      //ofx_set_max_value_int(param_props, 8);
       ofx_set_max_display_int(param_props, 8);
     }
 
     {
       OFX_CHECK(suite_param->paramDefine(params_set, kOfxParamTypeInteger, PARAM_DMX_CHANNEL, &param_props));
       ofx_set_label(param_props, "DMX Channel");
-      ofx_set_animates(param_props, true);
+      ofx_set_animates(param_props, false);
       ofx_set_evaluate_on_change(param_props, true);
       ofx_set_group(param_props, GROUP_FIXTURE);
-      ofx_set_min_value_int(param_props, 1);
+      //ofx_set_min_value_int(param_props, 1);
       ofx_set_min_display_int(param_props, 1);
-      ofx_set_max_value_int(param_props, 512);
+      //ofx_set_max_value_int(param_props, 512);
       ofx_set_max_display_int(param_props, 512);
     }
 
@@ -1338,9 +1355,9 @@ ofx_main(
       #define FLOAT_FIXTURE(i, id) { \
         OFX_CHECK(suite_param->paramDefine(params_set, kOfxParamTypeDouble, id, &param_props)); \
         ofx_set_label(param_props, "Float " id); \
-        ofx_set_min_value_double(param_props, 0); \
+        /*ofx_set_min_value_double(param_props, 0);*/ \
         ofx_set_min_display_double(param_props, 0); \
-        ofx_set_max_value_double(param_props, 1); \
+        /*ofx_set_max_value_double(param_props, 1);*/ \
         ofx_set_max_display_double(param_props, 1); \
         ofx_set_animates(param_props, true); \
         ofx_set_evaluate_on_change(param_props, true); \
@@ -1456,6 +1473,15 @@ ofx_main(
       return kOfxStatFailed;
     }
 
+    {
+      char* reason = 0;
+      OFX_CHECK(suite_props->propGetString(in_args, kOfxPropChangeReason, 0, &reason));
+
+      if (!str_equal(reason, kOfxChangeUserEdited )) {
+        return kOfxStatReplyDefault;
+      }
+    }
+
     char *prop_type = 0;
     OFX_CHECK(suite_props->propGetString(in_args, kOfxPropType, 0, &prop_type));
 
@@ -1499,6 +1525,8 @@ ofx_main(
           ofx_set_str(plugin->p_backing_fixture_cache, json_data.c_str());
           ofx_set_str(plugin->p_backing_fixture_filepath, new_path.c_str());
         } while(0);
+
+        return kOfxStatOK;
       }
       else if(str_equal(param_name, PARAM_BUTTON_RELOAD_FIXTURE_FILE)) {
         do {
@@ -1519,9 +1547,11 @@ ofx_main(
           ofx_set_str(plugin->p_fixture_name, plugin->fixture.id);
           ofx_set_str(plugin->p_backing_fixture_cache, json_data.c_str());
         } while (0);
+
+        return kOfxStatOK;
       }
     }
-    return kOfxStatOK;
+    return kOfxStatReplyDefault;
   }
 
   return kOfxStatReplyDefault;
