@@ -1,5 +1,7 @@
 {
   "id" : "SF3 - TD Controls - 2025 V1",
+  "default_dmx_universe": 6,
+  "default_dmx_channel": 309,
   "controls": [
     { "name": "Enable", "type": "float", "channel": 1 },
 

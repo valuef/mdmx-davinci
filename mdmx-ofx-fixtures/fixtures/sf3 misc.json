@@ -1,5 +1,7 @@
 {
   "id" : "SF3 - Misc - 2025 V1",
+  "default_dmx_universe": 6,
+  "default_dmx_channel": 243,
 
   "controls": [
     { "name": "Enable", "type": "float", "channel": 1 },
@@ -7,7 +9,14 @@
     { "name": "Enable Drone Map", "type": "float", "channel": 3 },
     { "name": "Delete World", "type": "float", "channel": 4 },
 
-    { "name": "HAM Particle Mode", "type": "float", "channel": 5 },
+    { 
+      "name": "HAM Particle Mode", 
+      "type": "float", 
+      "channel": 5,
+      "display_min": 0,
+      "display_max": 255
+    },
+
     { "name": "HAM Color Smoothing Speed", "type": "float", "channel": 6 },
     { "name": "HAM Depth Smoothing Speed", "type": "float", "channel": 7 },
     { "name": "HAM Bias Smoothing Speed", "type": "float", "channel": 8 },

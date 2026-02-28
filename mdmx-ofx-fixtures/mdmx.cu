@@ -21,6 +21,7 @@
 // 2026-02-13
 struct Payload {
   unsigned char bytes[6];
+  unsigned char mask[6];
 };
 
 __global__ void bit_blits(
@@ -35,6 +36,8 @@ __global__ void bit_blits(
   int byte_index = blockIdx.y / BITS_IN_BYTE;
 
   unsigned char data = payload.bytes[byte_index];
+  unsigned char should_write = payload.mask[byte_index];
+
   unsigned int mask = (1 << bit_index);
   unsigned int anded = data & mask;
 
@@ -44,11 +47,13 @@ __global__ void bit_blits(
   int y = px_y_start + threadIdx.y + blockIdx.y * DMX_BIT_SIZE;
   y = out_height - y - 1;
 
-  int idx = (y * px_stride + x) * 4; /* x4 as we're working with interleaved RGBA */
-  output[idx + 0] = bit;
-  output[idx + 1] = bit;
-  output[idx + 2] = bit;
-  output[idx + 3] = 1.0f;
+  if(should_write > 0) {
+    int idx = (y * px_stride + x) * 4; /* x4 as we're working with interleaved RGBA */
+    output[idx + 0] = bit;
+    output[idx + 1] = bit;
+    output[idx + 2] = bit;
+    output[idx + 3] = 1.0f;
+  }
 
   /*
   output[idx + 0] = (float)bit_index / 7.0f;
@@ -67,17 +72,13 @@ extern "C" void blit_dmx_line(
   int px_y_start,
   int num_bytes,
   unsigned char line[6],
-  unsigned char crc,
+  unsigned char mask[6],
   cudaStream_t stream
 ) {
 
   Payload payload = {};
-  payload.bytes[0] = line[0];
-  payload.bytes[1] = line[1];
-  payload.bytes[2] = line[2];
-  payload.bytes[3] = line[3];
-  payload.bytes[4] = line[4];
-  payload.bytes[5] = line[5];
+  for (int i = 0; i < num_bytes; i++) payload.bytes[i] = line[i];
+  for (int i = 0; i < num_bytes; i++) payload.mask[i] = mask[i];
 
   dim3 grid_size(1, num_bytes * BITS_IN_BYTE);
   dim3 block_size(DMX_BIT_SIZE, DMX_BIT_SIZE);

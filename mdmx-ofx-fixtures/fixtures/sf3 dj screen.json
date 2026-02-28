@@ -1,6 +1,7 @@
 {
   "id" : "SF3 - DJ Screen - 2025 V1",
-
+  "default_dmx_universe": 6,
+  "default_dmx_channel": 261,
   "controls": [
     { "name": "Enable", "type": "float", "channel": 1 },
 

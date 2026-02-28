@@ -33,6 +33,8 @@ using namespace Microsoft::WRL;
 #include "sfd.h"
 
 #define MAX_FIXTURE_CHANNELS 32
+#define DEFAULT_DMX_UNIVERSE 1
+#define DEFAULT_DMX_CHANNEL 1
 
 extern "C" void blit_dmx_line(
   float* output,
@@ -42,7 +44,7 @@ extern "C" void blit_dmx_line(
   int px_y_start,
   int num_bytes,
   unsigned char line[6],
-  unsigned char crc,
+  unsigned char mask[6],
   cudaStream_t stream
 );
 
@@ -63,7 +65,7 @@ extern "C" void blit_dmx_line(
   #define PLUGIN_NAME PLUGIN_BASE_NAME
 #else
   #define PLUGIN_MAJOR 1
-  #define PLUGIN_MINOR 1
+  #define PLUGIN_MINOR 2
 
   #define PLUGIN_BASE_NAME "MDMX Fixture"
   #define PLUGIN_ID_BASE "gay.value.mdmx_fixture"
@@ -127,14 +129,15 @@ ofx_set_host(
 #define PARAM_DMX_CHANNEL "DMXChannel"
 
 #define GROUP_FIXTURE "GroupFixtureDefinition"
+#define GROUP_WRITE_MASK "GroupWriteMask"
 #define GROUP_FIXTURE_FILE "GroupFixtureFile"
-#define GROUP_CHANNELS "GroupChannels"
 #define GROUP_BACKING "GroupBacking"
 
 #define PARAM_ID_RGB(i) "CHANNEL_RGB_" TO_STR(i)
 #define PARAM_ID_FLOAT1(i) "CHANNEL_FLOAT_" TO_STR(i)
 #define PARAM_ID_FLOAT2(i) "CHANNEL_FLOAT2_" TO_STR(i)
 #define PARAM_ID_FLOAT3(i) "CHANNEL_FLOAT3_" TO_STR(i)
+#define PARAM_ID_WRITE_MASK(i) "CHANNEL_WRITE_MASK_" TO_STR(i)
 
 struct Fixture {
 
@@ -206,12 +209,21 @@ struct Fixture {
     double default_r;
     double default_g;
     double default_b;
+
+    // Whether or not the pixels associated with this control will actually be drawn.
+    bool write_mask;
   };
 
   char id[128];
   Control controls[32];
   int num_controls;
   int bytes_for_dmx_buffer;
+
+  // If set, these values will become the defaults for the dmx universe and channel. 
+  // The channel and universe will be set to these values when the fixture is loaded if the values aren't the default 1,1
+  bool has_default_dmx_location = false;
+  int default_dmx_universe = 1;
+  int default_dmx_channel = 1;
 };
 
 // TODO would love a way to communicate the various notes from the patch and present them to the user
@@ -221,6 +233,8 @@ struct Param_Group {
   OFX_Param_Instance f32_1;
   OFX_Param_Instance f32_2;
   OFX_Param_Instance f32_3;
+
+  OFX_Param_Instance write_mask;
 };
 
 struct Plugin_Data {
@@ -286,6 +300,56 @@ reset_double_param(
   ofx_set_default_double(props, 0);
 }
 
+static inline
+double clamp_d(
+  double x,
+  double min_value,
+  double max_value
+) {
+  if (x > max_value) return max_value;
+  if (min_value > x) return min_value;
+  return x;
+}
+
+static inline
+int clamp_i(
+  int x,
+  int min_value,
+  int max_value
+) {
+  if (x > max_value) return max_value;
+  if (min_value > x) return min_value;
+  return x;
+}
+
+
+static
+int
+get_dmx_universe(
+  Plugin_Data *plugin
+) {
+  int dmx_universe = 1;
+  OFX_CHECK(suite_param->paramGetValue(plugin->p_dmx_universe.handle, &dmx_universe));
+
+  dmx_universe = clamp_i(dmx_universe, 1, 8);
+
+  return dmx_universe;
+}
+
+static
+int
+get_dmx_channel(
+  Plugin_Data *plugin
+) {
+  int dmx_channel = 1;
+  OFX_CHECK(suite_param->paramGetValue(plugin->p_dmx_channel.handle, &dmx_channel));
+
+  dmx_channel = clamp_i(dmx_channel, 1, 512);
+
+  return dmx_channel;
+}
+
+
 static
 void
 load_fixture(
@@ -296,10 +360,12 @@ load_fixture(
   plugin->bytes_for_dmx_buffer = 0;
 
   for (int i = 0; i < MAX_FIXTURE_CHANNELS; i++) {
+
+    ofx_set_is_secret(plugin->params[i].write_mask.props, true);
+
     {
       ofx_set_is_secret(plugin->params[i].rgb.props, true);
       ofx_set_default_rgb(plugin->params[i].rgb.props, 1, 1, 1);
-
     }
 
     reset_double_param(plugin->params[i].f32_1.props);
@@ -310,6 +376,12 @@ load_fixture(
   auto channel_watermark = 0;
   for (int i = 0; i < fixture.num_controls; i++) {
     auto* control = &fixture.controls[i];
+
+    {
+      auto props = plugin->params[i].write_mask.props;
+      ofx_set_is_secret(props, false);
+      ofx_set_label(props, control->name);
+    }
 
     if(control->type == Fixture::Control::Type::float_fader) {
       channel_watermark = max(channel_watermark , control->channel);
@@ -364,6 +436,24 @@ load_fixture(
     }
     else {
       assert(false);
+    }
+  }
+
+  {
+    ofx_set_default_int(plugin->p_dmx_universe.props, DEFAULT_DMX_UNIVERSE);
+    ofx_set_default_int(plugin->p_dmx_channel.props, DEFAULT_DMX_CHANNEL);
+
+    if(fixture.has_default_dmx_location) {
+      auto dmx_universe = get_dmx_universe(plugin);
+      auto dmx_channel = get_dmx_channel(plugin);
+
+      if(dmx_universe == DEFAULT_DMX_UNIVERSE && dmx_channel == DEFAULT_DMX_CHANNEL) {
+        OFX_CHECK(suite_param->paramSetValue(plugin->p_dmx_universe.handle, fixture.default_dmx_universe));
+        OFX_CHECK(suite_param->paramSetValue(plugin->p_dmx_channel.handle, fixture.default_dmx_channel));
+
+        ofx_set_default_int(plugin->p_dmx_universe.props, fixture.default_dmx_universe);
+        ofx_set_default_int(plugin->p_dmx_channel.props, fixture.default_dmx_channel);
+      }
     }
   }
 
@@ -461,6 +551,14 @@ parse_fixture_json(
   jsonr_v_table(j) {
     if(jsonr_k_case(j, "id")) {
       json_read_string_strcpy(j, fixture->id, ARRAYSIZE(fixture->id));
+    }
+    else if(jsonr_k_case(j, "default_dmx_universe")) {
+      fixture->has_default_dmx_location = true;
+      fixture->default_dmx_universe = jsonr_v_number(j);
+    }
+    else if(jsonr_k_case(j, "default_dmx_channel")) {
+      fixture->has_default_dmx_location = true;
+      fixture->default_dmx_channel = jsonr_v_number(j);
     }
     else if (jsonr_k_case(j, "controls")) {
       int count = 0;
@@ -661,6 +759,7 @@ init_plugin(
     plugin->params[i].f32_1 = ofx_get_param(PARAM_ID_FLOAT1(i), param_set); \
     plugin->params[i].f32_2 = ofx_get_param(PARAM_ID_FLOAT2(i), param_set); \
     plugin->params[i].f32_3 = ofx_get_param(PARAM_ID_FLOAT3(i), param_set); \
+    plugin->params[i].write_mask = ofx_get_param(PARAM_ID_WRITE_MASK(i), param_set); \
   }
 
   LOAD_FIXTURE_GROUP(0)
@@ -720,27 +819,6 @@ cleanup_plugin(
 ) {
 }
 
-static inline
-double clamp_d(
-  double x,
-  double min_value,
-  double max_value
-) {
-  if(x > max_value) return max_value;
-  if(min_value > x) return min_value;
-  return x;
-}
-
-static inline
-int clamp_i(
-  int x,
-  int min_value,
-  int max_value
-) {
-  if (x > max_value) return max_value;
-  if (min_value > x) return min_value;
-  return x;
-}
 
 #define saturate_d(x) clamp_d(x, 0, 1)
 
@@ -773,13 +851,24 @@ is_valid_array_index(
   return true;
 }
 
+static
+void
+write_mask(
+  int cursor,
+  bool mask,
+  unsigned char *mask_buf
+) {
+  mask_buf[cursor] = mask;
+}
 
 static
 void
 write_double_as_8(
   int cursor,
   double value,
-  unsigned char *buf,
+  unsigned char *dmx_buf,
+  unsigned char *mask_buf,
+  bool mask,
   int *min_dmx_value
 ) {
   auto as_byte = (unsigned char)(value * 255.0);
@@ -788,7 +877,9 @@ write_double_as_8(
     as_byte = max(*min_dmx_value, as_byte);
   }
 
-  buf[cursor] = as_byte;
+  dmx_buf[cursor] = as_byte;
+
+  write_mask(cursor, mask, mask_buf);
 }
 
 static
@@ -797,7 +888,9 @@ write_double_as_16(
   int cursor,
   int fine_cursor,
   double value,
-  unsigned char *buf,
+  unsigned char *dmx_buf,
+  unsigned char *mask_buf,
+  bool mask,
   int *min_dmx_value
 ) {
   auto as_16 = (uint16_t)(value * 65535.0);
@@ -812,8 +905,11 @@ write_double_as_16(
   auto high_u8 = (unsigned char)high_u16;
   auto low_u8 = (unsigned char)low_u16;
 
-  buf[cursor] = high_u16;
-  buf[fine_cursor] = low_u16;
+  dmx_buf[cursor] = high_u16;
+  dmx_buf[fine_cursor] = low_u16;
+
+  write_mask(cursor, mask, mask_buf);
+  write_mask(fine_cursor, mask, mask_buf);
 }
 
 static
@@ -822,8 +918,10 @@ encode_double_as_8(
   int relative_dmx_channel,
   double value,
   Fixture::Control *control,
-  unsigned char *buf,
-  int buf_size
+  unsigned char *dmx_buf,
+  unsigned char *mask_buf,
+  int buf_size,
+  bool mask
 ) {
   auto idx = relative_dmx_channel - 1;
 
@@ -834,7 +932,9 @@ encode_double_as_8(
   write_double_as_8(
     idx, 
     value, 
-    buf, 
+    dmx_buf, 
+    mask_buf,
+    mask,
     control->has_min_dmx_value ? &control->min_dmx_value : 0
   );
 }
@@ -846,8 +946,10 @@ encode_double_as_16(
   int relative_dmx_channel_fine,
   double value,
   Fixture::Control *control,
-  unsigned char *buf,
-  int buf_size
+  unsigned char *dmx_buf,
+  unsigned char *mask_buf,
+  int buf_size,
+  bool mask
 ) {
   auto idx = relative_dmx_channel - 1;
   auto idx_fine = relative_dmx_channel_fine - 1;
@@ -861,7 +963,9 @@ encode_double_as_16(
     idx, 
     idx_fine,
     value, 
-    buf,
+    dmx_buf,
+    mask_buf,
+    mask,
     control->has_min_dmx_value ? &control->min_dmx_value : 0
   );
 }
@@ -874,8 +978,10 @@ get_double_and_encode_as_16(
   OfxParamHandle param_handle,
   double time,
   Fixture::Control *control,
-  unsigned char *buf,
-  int buf_size
+  unsigned char *dmx_buf,
+  unsigned char *mask_buf,
+  int buf_size,
+  bool mask
 ) {
   double value = 0;
   suite_param->paramGetValueAtTime(param_handle, time, &value);
@@ -885,8 +991,10 @@ get_double_and_encode_as_16(
     relative_dmx_channel_fine,
     value,
     control,
-    buf,
-    buf_size
+    dmx_buf,
+    mask_buf,
+    buf_size,
+    mask
   );
 }
 
@@ -985,8 +1093,12 @@ ofx_main(
     check_cuda_error(err, plugin);
 
     auto buf_size = plugin->bytes_for_dmx_buffer;
-    auto *buf = (unsigned char*)_alloca(buf_size);
-    memset(buf, 0, buf_size);
+
+    auto *dmx_buf = (unsigned char*)_alloca(buf_size);
+    auto *mask_buf = (unsigned char*)_alloca(buf_size);
+
+    memset(dmx_buf, 0, buf_size);
+    memset(mask_buf, 1, buf_size);
 
     {
       auto write_cursor = 0;
@@ -994,11 +1106,18 @@ ofx_main(
       for(int i = 0; i < plugin->fixture.num_controls; i++) {
         auto *control = &plugin->fixture.controls[i];
 
+        int should_write = true;
+        {
+          int value = 1;
+          suite_param->paramGetValueAtTime(plugin->params[i].write_mask.handle, time, &value);
+          should_write = value != 0;
+        }
+
         if(control->type == Fixture::Control::Type::float_fader) do {
           double value = 0;
           suite_param->paramGetValueAtTime(plugin->params[i].f32_1.handle, time, &value);
 
-          encode_double_as_8(control->channel, value, control, buf, buf_size);
+          encode_double_as_8(control->channel, value, control, dmx_buf, mask_buf, buf_size, should_write);
         } while(0);
         else if(control->type == Fixture::Control::Type::rgb) do {
           if(!is_valid_array_index(control->red_channel, buf_size)) break;
@@ -1010,9 +1129,9 @@ ofx_main(
           double b = 0;
           suite_param->paramGetValueAtTime(plugin->params[i].rgb.handle, time, &r, &g, &b);
 
-          write_double_as_8(control->red_channel - 1, r, buf, nullptr);
-          write_double_as_8(control->green_channel - 1, g, buf, nullptr);
-          write_double_as_8(control->blue_channel - 1, b, buf, nullptr);
+          write_double_as_8(control->red_channel - 1, r, dmx_buf, mask_buf, should_write, nullptr);
+          write_double_as_8(control->green_channel - 1, g, dmx_buf, mask_buf, should_write, nullptr);
+          write_double_as_8(control->blue_channel - 1, b, dmx_buf, mask_buf, should_write, nullptr);
         } while(0);
         else if(control->type == Fixture::Control::Type::pan_tilt_16) {
 
@@ -1020,14 +1139,14 @@ ofx_main(
             control->x_channel,
             control->x_fine_channel,
             plugin->params[i].f32_1.handle, 
-            time, control, buf, buf_size
+            time, control, dmx_buf, mask_buf, buf_size, should_write
           );
 
           get_double_and_encode_as_16( // tilt
             control->y_channel,
             control->y_fine_channel,
             plugin->params[i].f32_2.handle, 
-            time, control, buf, buf_size
+            time, control, dmx_buf, mask_buf, buf_size, should_write
           );
         }
         else if(control->type == Fixture::Control::Type::pos_xyz_16) {
@@ -1035,21 +1154,21 @@ ofx_main(
             control->x_channel,
             control->x_fine_channel,
             plugin->params[i].f32_1.handle, 
-            time, control, buf, buf_size
+            time, control, dmx_buf, mask_buf, buf_size, should_write
           );
 
           get_double_and_encode_as_16( // y
             control->y_channel,
             control->y_fine_channel,
             plugin->params[i].f32_2.handle, 
-            time, control, buf, buf_size
+            time, control, dmx_buf, mask_buf, buf_size, should_write
           ); 
 
           get_double_and_encode_as_16( // z
             control->z_channel,
             control->z_fine_channel,
             plugin->params[i].f32_3.handle, 
-            time, control, buf, buf_size
+            time, control, dmx_buf, mask_buf, buf_size, should_write
           );
         }
         else if(control->type == Fixture::Control::Type::euler_xyz_16) {
@@ -1057,21 +1176,21 @@ ofx_main(
             control->x_channel,
             control->x_fine_channel,
             plugin->params[i].f32_1.handle, 
-            time, control, buf, buf_size
+            time, control, dmx_buf, mask_buf, buf_size, should_write
           );
 
           get_double_and_encode_as_16( // y
             control->y_channel,
             control->y_fine_channel,
             plugin->params[i].f32_2.handle, 
-            time, control, buf, buf_size
+            time, control, dmx_buf, mask_buf, buf_size, should_write
           ); 
 
           get_double_and_encode_as_16( // z
             control->z_channel,
             control->z_fine_channel,
             plugin->params[i].f32_3.handle, 
-            time, control, buf, buf_size
+            time, control, dmx_buf, mask_buf, buf_size, should_write
           );
         }
         else {
@@ -1080,20 +1199,17 @@ ofx_main(
       }
     }
 
-    int dmx_universe = 1;
-    OFX_CHECK(suite_param->paramGetValue(plugin->p_dmx_universe.handle, &dmx_universe));
-    int dmx_channel = 1;
-    OFX_CHECK(suite_param->paramGetValue(plugin->p_dmx_channel.handle, &dmx_channel));
-
-    dmx_universe = clamp_i(dmx_universe, 1, 8);
-    dmx_channel  = clamp_i(dmx_channel, 1, 512);
+    auto dmx_universe = get_dmx_universe(plugin);
+    auto dmx_channel = get_dmx_channel(plugin);
 
     auto grid_channel = ((dmx_universe - 1) * 512) + (dmx_channel - 1);
 
     auto grid_line = grid_channel / 6;
     auto y_start_offset = grid_channel % 6;
     auto remaining_bytes = buf_size;
-    auto *read_cursor = buf;
+
+    auto *dmx_cursor = dmx_buf;
+    auto *mask_cursor = mask_buf;
 
     while(true) {
       if(remaining_bytes <= 0) break;
@@ -1103,7 +1219,6 @@ ofx_main(
 
       auto num_bytes_to_blit = min(6 - y_start_offset, remaining_bytes);
 
-      unsigned char crc = 0;
       blit_dmx_line(
         (float*)out_px, 
         out_width, 
@@ -1111,8 +1226,8 @@ ofx_main(
         px_x_start, 
         px_y_start, 
         num_bytes_to_blit,
-        read_cursor,
-        crc, 
+        dmx_cursor,
+        mask_cursor,
         stream
       );
 
@@ -1122,7 +1237,9 @@ ofx_main(
       grid_line += 1;
       y_start_offset = 0;
       remaining_bytes -= num_bytes_to_blit;
-      read_cursor += num_bytes_to_blit;
+
+      dmx_cursor += num_bytes_to_blit;
+      mask_cursor += num_bytes_to_blit;
     }
 
     return kOfxStatOK;
@@ -1313,6 +1430,7 @@ ofx_main(
     OfxPropertySetHandle param_props;
 
     ofx_add_group(params_set, GROUP_FIXTURE, "Fixture");
+    ofx_add_group(params_set, GROUP_WRITE_MASK, "Write Mask");
 
     {
       OFX_CHECK(suite_param->paramDefine(params_set, kOfxParamTypeInteger, PARAM_DMX_UNIVERSE, &param_props));
@@ -1320,6 +1438,7 @@ ofx_main(
       ofx_set_animates(param_props, false);
       ofx_set_evaluate_on_change(param_props, true);
       ofx_set_group(param_props, GROUP_FIXTURE);
+      ofx_set_default_int(param_props, DEFAULT_DMX_UNIVERSE);
       //ofx_set_min_value_int(param_props, 1);
       ofx_set_min_display_int(param_props, 1);
       //ofx_set_max_value_int(param_props, 8);
@@ -1332,6 +1451,7 @@ ofx_main(
       ofx_set_animates(param_props, false);
       ofx_set_evaluate_on_change(param_props, true);
       ofx_set_group(param_props, GROUP_FIXTURE);
+      ofx_set_default_int(param_props, DEFAULT_DMX_CHANNEL);
       //ofx_set_min_value_int(param_props, 1);
       ofx_set_min_display_int(param_props, 1);
       //ofx_set_max_value_int(param_props, 512);
@@ -1341,8 +1461,6 @@ ofx_main(
     ofx_add_readonly_str(params_set, PARAM_FIXTURE_NAME, "Fixture", false, GROUP_FIXTURE);
 
     {
-      ofx_add_group(params_set, GROUP_CHANNELS, "Channels");
-
       #define RGB_FIXTURE(i) { \
         OFX_CHECK(suite_param->paramDefine(params_set, kOfxParamTypeRGB, PARAM_ID_RGB(i), &param_props)); \
         ofx_set_label(param_props, "Color " TO_STR(i)); \
@@ -1365,11 +1483,22 @@ ofx_main(
         ofx_set_group(param_props, GROUP_FIXTURE); \
       }
 
+      #define WRITE_MASK(i, id) { \
+        OFX_CHECK(suite_param->paramDefine(params_set, kOfxParamTypeBoolean, id, &param_props)); \
+        ofx_set_label(param_props, "Write " id); \
+        ofx_set_animates(param_props, true); \
+        ofx_set_evaluate_on_change(param_props, true); \
+        ofx_set_is_secret(param_props, true); \
+        ofx_set_group(param_props, GROUP_WRITE_MASK); \
+        ofx_set_default_bool(param_props, true); \
+      }
+
       #define FIXTURE_GROUP(i) \
         RGB_FIXTURE(i) \
         FLOAT_FIXTURE(i, PARAM_ID_FLOAT1(i)) \
         FLOAT_FIXTURE(i, PARAM_ID_FLOAT2(i)) \
-        FLOAT_FIXTURE(i, PARAM_ID_FLOAT3(i))
+        FLOAT_FIXTURE(i, PARAM_ID_FLOAT3(i)) \
+        WRITE_MASK(i, PARAM_ID_WRITE_MASK(i))
 
       FIXTURE_GROUP(0)
       FIXTURE_GROUP(1)

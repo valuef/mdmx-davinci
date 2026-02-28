@@ -1,5 +1,8 @@
 {
   "id" : "SF3 - Clouds - 2025 V1",
+  "default_dmx_universe": 6,
+  "default_dmx_channel": 291,
+
   "controls": [
     { "name": "Enable", "type": "float", "channel": 1 },
 
