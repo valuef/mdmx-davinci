@@ -8,7 +8,12 @@
     { "name": "Fade Out", "type": "float", "channel": 3 },
     { "name": "Additive", "type": "float", "channel": 4 },
     { "name": "Edge Fade", "type": "float", "channel": 5 },
-    { "name": "DJ Platform Height", "type": "float", "channel": 6 },
+    { 
+      "name": "DJ Platform Height", 
+      "type": "float", 
+      "channel": 6,
+      "default_value": 0.5
+    },
     { "name": "Disable 3DJ", "type": "float", "channel": 7 },
     { "name": "Disable DJ Platform", "type": "float", "channel": 8 },
     { "name": "Force Resync", "type": "float", "channel": 9 },

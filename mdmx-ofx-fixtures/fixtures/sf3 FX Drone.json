@@ -1,0 +1,54 @@
+{
+  "id" : "SF3 - SF Drone - 2025 V1",
+  "controls": [
+    { 
+      "name": "Position", 
+      "type": "pos_xyz_16", 
+
+      "display_min": -800, 
+      "display_max": 800,
+
+      "x_channel": 1,
+      "x_fine_channel": 2,
+
+      "y_channel": 3,
+      "y_fine_channel": 4,
+
+      "z_channel": 5,
+      "z_fine_channel": 6
+    },
+
+    { 
+      "name": "Pitch", 
+      "type": "float", 
+      "channel": 7,
+      "display_min": 0,
+      "display_max": 360
+    },
+
+    { 
+      "name": "Yaw", 
+      "type": "float", 
+      "channel": 8,
+      "display_min": 0,
+      "display_max": 360
+    },
+
+    { 
+      "name": "Roll", 
+      "type": "float", 
+      "channel": 9,
+      "display_min": 0,
+      "display_max": 360
+    },
+
+    { 
+      "name": "FX Trigger", 
+      "type": "float", 
+      "channel": 10,
+
+      "display_min": 0,
+      "display_max": 255
+    }
+  ]
+}
