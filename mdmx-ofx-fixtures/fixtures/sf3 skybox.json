@@ -58,6 +58,18 @@
     { "name": "FX Bump 2", "type": "float", "channel": 19 },
 
     { "name": "Video Mapping Mode", "type": "float", "channel": 20 },
-    { "name": "Sky Shatter", "type": "float", "channel": 21 }
+    { "name": "Sky Shatter", "type": "float", "channel": 21 },
+
+    { 
+      "name": "Celestial Body Selector", 
+      "type": "float", 
+      "channel": 22,
+      "display_min": 0,
+      "display_max": 64
+    },
+
+    { "name": "Celestial Body Azimuth", "type": "float", "channel": 23 },
+    { "name": "Celestial Body Polar", "type": "float", "channel": 24 },
+    { "name": "Celestial Body Size", "type": "float", "channel": 25 }
   ]
 }
