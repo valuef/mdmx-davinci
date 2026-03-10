@@ -69,7 +69,6 @@
     },
 
     { "name": "Celestial Body Azimuth", "type": "float", "channel": 23 },
-    { "name": "Celestial Body Polar", "type": "float", "channel": 24 },
-    { "name": "Celestial Body Size", "type": "float", "channel": 25 }
+    { "name": "Celestial Body Polar", "type": "float", "channel": 24 }
   ]
 }
