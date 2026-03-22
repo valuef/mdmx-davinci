@@ -65,7 +65,7 @@ extern "C" void blit_dmx_line(
   #define PLUGIN_NAME PLUGIN_BASE_NAME
 #else
   #define PLUGIN_MAJOR 1
-  #define PLUGIN_MINOR 2
+  #define PLUGIN_MINOR 3
 
   #define PLUGIN_BASE_NAME "MDMX Fixture"
   #define PLUGIN_ID_BASE "gay.value.mdmx_fixture"
@@ -127,6 +127,7 @@ ofx_set_host(
 
 #define PARAM_DMX_UNIVERSE "DMXUniverse"
 #define PARAM_DMX_CHANNEL "DMXChannel"
+#define PARAM_FIXTURE_INDEX "DMXFixtureIndex"
 
 #define GROUP_FIXTURE "GroupFixtureDefinition"
 #define GROUP_WRITE_MASK "GroupWriteMask"
@@ -144,6 +145,7 @@ struct Fixture {
   struct Control {
     enum Type {
       float_fader,
+      float_16_fader,
       rgb,
       pan_tilt_16,
       pos_xyz_16,
@@ -163,6 +165,7 @@ struct Fixture {
 
     // For float_fader, determines the relative DMX channel to output to.
     int channel;
+    int channel_fine;
 
     // For rgb, determines the relative DMX channels of RGB to output to.
     int red_channel;
@@ -224,6 +227,13 @@ struct Fixture {
   bool has_default_dmx_location = false;
   int default_dmx_universe = 1;
   int default_dmx_channel = 1;
+
+  // If this is above 1, it indicates that there are "num_fixtures_in_sequence" of fixtures in sequence and we should be able to
+  // easily swap between them using a slider.
+  int num_fixtures_in_sequence = 1;
+
+  // Number of DMX byte channels that we need to jump to get to the next fixture.
+  int channel_stride;
 };
 
 // TODO would love a way to communicate the various notes from the patch and present them to the user
@@ -253,7 +263,7 @@ struct Plugin_Data {
 
   OFX_Param_Instance p_dmx_universe;
   OFX_Param_Instance p_dmx_channel;
-
+  OFX_Param_Instance p_dmx_fixture_index;
 };
 
 
@@ -262,7 +272,7 @@ void
 enable_double_param(
   OfxPropertySetHandle props,
   const char *name,
-  Fixture::Control *control
+  const Fixture::Control *control
 ) {
   ofx_set_is_secret(props, false);
   ofx_set_label(props, name);
@@ -353,11 +363,12 @@ get_dmx_channel(
 static
 void
 load_fixture(
-  Fixture& fixture,
+  const Fixture& fixture,
   Plugin_Data* plugin
 ) {
   plugin->fixture = fixture;
   plugin->bytes_for_dmx_buffer = 0;
+
 
   for (int i = 0; i < MAX_FIXTURE_CHANNELS; i++) {
 
@@ -385,6 +396,12 @@ load_fixture(
 
     if(control->type == Fixture::Control::Type::float_fader) {
       channel_watermark = max(channel_watermark , control->channel);
+
+      enable_double_param(plugin->params[i].f32_1.props, control->name, control);
+    }
+    else if (control->type == Fixture::Control::Type::float_16_fader) {
+      channel_watermark = max(channel_watermark, control->channel);
+      channel_watermark = max(channel_watermark, control->channel_fine);
 
       enable_double_param(plugin->params[i].f32_1.props, control->name, control);
     }
@@ -439,6 +456,21 @@ load_fixture(
     }
   }
 
+  if(fixture.num_fixtures_in_sequence > 1) {
+    ofx_set_min_display_int(plugin->p_dmx_fixture_index.props, 1);
+    ofx_set_max_display_int(plugin->p_dmx_fixture_index.props, fixture.num_fixtures_in_sequence);
+
+    //ofx_set_min_value_int(plugin->p_dmx_fixture_index.props, 1);
+    //ofx_set_max_value_int(plugin->p_dmx_fixture_index.props, fixture.num_fixtures_in_sequence);
+
+    OFX_CHECK(suite_param->paramSetValue(plugin->p_dmx_fixture_index.handle, 1));
+
+    ofx_set_is_secret(plugin->p_dmx_fixture_index.props, false);
+  }
+  else {
+    ofx_set_is_secret(plugin->p_dmx_fixture_index.props, true);
+  }
+
   {
     ofx_set_default_int(plugin->p_dmx_universe.props, DEFAULT_DMX_UNIVERSE);
     ofx_set_default_int(plugin->p_dmx_channel.props, DEFAULT_DMX_CHANNEL);
@@ -457,6 +489,7 @@ load_fixture(
     }
   }
 
+  plugin->fixture.channel_stride = channel_watermark;
   plugin->bytes_for_dmx_buffer = min(255, channel_watermark);
 }
 
@@ -560,6 +593,9 @@ parse_fixture_json(
       fixture->has_default_dmx_location = true;
       fixture->default_dmx_channel = jsonr_v_number(j);
     }
+    else if(jsonr_k_case(j, "num_fixtures_in_sequence")) {
+      fixture->num_fixtures_in_sequence = jsonr_v_number(j);
+    }
     else if (jsonr_k_case(j, "controls")) {
       int count = 0;
 
@@ -581,6 +617,9 @@ parse_fixture_json(
 
             if(str_equal(data, "float")) {
               control->type = Fixture::Control::Type::float_fader;
+            }
+            else if (str_equal(data, "float_16")) {
+              control->type = Fixture::Control::Type::float_16_fader;
             }
             else if(str_equal(data, "rgb")) {
               control->type = Fixture::Control::Type::rgb;
@@ -609,6 +648,9 @@ parse_fixture_json(
           }
           else if(jsonr_k_case(j, "channel")) {
             control->channel = jsonr_v_number(j);
+          }
+          else if (jsonr_k_case(j, "channel_fine")) {
+            control->channel_fine = jsonr_v_number(j);
           }
           else if(jsonr_k_case(j, "x_channel")) {
             control->x_channel = jsonr_v_number(j);
@@ -798,8 +840,10 @@ init_plugin(
   plugin->p_fixture_name = ofx_get_param(PARAM_FIXTURE_NAME, param_set);
   plugin->p_backing_fixture_cache = ofx_get_param(PARAM_BACKING_FIXTURE_CACHE, param_set);
   plugin->p_backing_fixture_filepath = ofx_get_param(PARAM_BACKING_FIXTURE_FILEPATH, param_set);
+
   plugin->p_dmx_universe = ofx_get_param(PARAM_DMX_UNIVERSE, param_set);
   plugin->p_dmx_channel = ofx_get_param(PARAM_DMX_CHANNEL, param_set);
+  plugin->p_dmx_fixture_index = ofx_get_param(PARAM_FIXTURE_INDEX, param_set);
 
   {
     auto cache = ofx_get_cstr(plugin->p_backing_fixture_cache);
@@ -984,7 +1028,7 @@ get_double_and_encode_as_16(
   bool mask
 ) {
   double value = 0;
-  suite_param->paramGetValueAtTime(param_handle, time, &value);
+  OFX_CHECK(suite_param->paramGetValueAtTime(param_handle, time, &value));
 
   encode_double_as_16(
     relative_dmx_channel,
@@ -1109,16 +1153,24 @@ ofx_main(
         int should_write = true;
         {
           int value = 1;
-          suite_param->paramGetValueAtTime(plugin->params[i].write_mask.handle, time, &value);
+          OFX_CHECK(suite_param->paramGetValueAtTime(plugin->params[i].write_mask.handle, time, &value));
           should_write = value != 0;
         }
 
         if(control->type == Fixture::Control::Type::float_fader) do {
           double value = 0;
-          suite_param->paramGetValueAtTime(plugin->params[i].f32_1.handle, time, &value);
+          OFX_CHECK(suite_param->paramGetValueAtTime(plugin->params[i].f32_1.handle, time, &value));
 
           encode_double_as_8(control->channel, value, control, dmx_buf, mask_buf, buf_size, should_write);
         } while(0);
+        else if (control->type == Fixture::Control::Type::float_16_fader) {
+          get_double_and_encode_as_16(
+            control->channel,
+            control->channel_fine,
+            plugin->params[i].f32_1.handle,
+            time, control, dmx_buf, mask_buf, buf_size, should_write
+          );
+        }
         else if(control->type == Fixture::Control::Type::rgb) do {
           if(!is_valid_array_index(control->red_channel, buf_size)) break;
           if(!is_valid_array_index(control->green_channel, buf_size)) break;
@@ -1127,7 +1179,7 @@ ofx_main(
           double r = 0;
           double g = 0;
           double b = 0;
-          suite_param->paramGetValueAtTime(plugin->params[i].rgb.handle, time, &r, &g, &b);
+          OFX_CHECK(suite_param->paramGetValueAtTime(plugin->params[i].rgb.handle, time, &r, &g, &b));
 
           write_double_as_8(control->red_channel - 1, r, dmx_buf, mask_buf, should_write, nullptr);
           write_double_as_8(control->green_channel - 1, g, dmx_buf, mask_buf, should_write, nullptr);
@@ -1203,6 +1255,16 @@ ofx_main(
     auto dmx_channel = get_dmx_channel(plugin);
 
     auto grid_channel = ((dmx_universe - 1) * 512) + (dmx_channel - 1);
+
+    if(plugin->fixture.num_fixtures_in_sequence > 1) {
+      int index = 1;
+      OFX_CHECK(suite_param->paramGetValue(plugin->p_dmx_fixture_index.handle, &index));
+
+      clamp_i(index, 1, plugin->fixture.num_fixtures_in_sequence);
+
+      auto stride = (index - 1) * plugin->fixture.channel_stride;
+      grid_channel += stride;
+    }
 
     auto grid_line = grid_channel / 6;
     auto y_start_offset = grid_channel % 6;
@@ -1456,6 +1518,16 @@ ofx_main(
       ofx_set_min_display_int(param_props, 1);
       //ofx_set_max_value_int(param_props, 512);
       ofx_set_max_display_int(param_props, 512);
+    }
+
+    {
+      OFX_CHECK(suite_param->paramDefine(params_set, kOfxParamTypeInteger, PARAM_FIXTURE_INDEX, &param_props));
+      ofx_set_label(param_props, "Fixture Index");
+      ofx_set_animates(param_props, false);
+      ofx_set_evaluate_on_change(param_props, true);
+      ofx_set_group(param_props, GROUP_FIXTURE);
+      ofx_set_default_int(param_props, 1);
+      ofx_set_is_secret(param_props, true);
     }
 
     ofx_add_readonly_str(params_set, PARAM_FIXTURE_NAME, "Fixture", false, GROUP_FIXTURE);
