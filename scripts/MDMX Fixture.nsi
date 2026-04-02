@@ -1,7 +1,7 @@
 !include "MUI2.nsh"
 
 !define VER_MAJOR 1
-!define VER_MINOR 3
+!define VER_MINOR 4
 !define NAME "MDMX Fixture"
 !define INPUT_FILE "MDMX_Fixture.ofx"
 !define OUT_FILE "MDMX Fixture Installer.exe"

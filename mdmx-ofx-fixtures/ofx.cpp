@@ -65,7 +65,7 @@ extern "C" void blit_dmx_line(
   #define PLUGIN_NAME PLUGIN_BASE_NAME
 #else
   #define PLUGIN_MAJOR 1
-  #define PLUGIN_MINOR 3
+  #define PLUGIN_MINOR 4
 
   #define PLUGIN_BASE_NAME "MDMX Fixture"
   #define PLUGIN_ID_BASE "gay.value.mdmx_fixture"
@@ -139,6 +139,8 @@ ofx_set_host(
 #define PARAM_ID_FLOAT2(i) "CHANNEL_FLOAT2_" TO_STR(i)
 #define PARAM_ID_FLOAT3(i) "CHANNEL_FLOAT3_" TO_STR(i)
 #define PARAM_ID_WRITE_MASK(i) "CHANNEL_WRITE_MASK_" TO_STR(i)
+#define PARAM_ID_TOGGLE(i) "CHANNEL_TOGGLE_" TO_STR(i)
+#define PARAM_ID_INTEGER(i) "CHANNEL_INTEGER_" TO_STR(i)
 
 struct Fixture {
 
@@ -150,6 +152,8 @@ struct Fixture {
       pan_tilt_16,
       pos_xyz_16,
       euler_xyz_16,
+      toggle,
+      integer,
     };
 
     // The name of the control.
@@ -245,6 +249,9 @@ struct Param_Group {
   OFX_Param_Instance f32_3;
 
   OFX_Param_Instance write_mask;
+
+  OFX_Param_Instance toggle;
+  OFX_Param_Instance integer;
 };
 
 struct Plugin_Data {
@@ -282,6 +289,7 @@ enable_double_param(
     // fixture hits the keyframe system first will imprint the min/max into the system for the plugin type and we won't be able to change it.
     // Thankfully the animation system doesn't care about display min/max.
     // 2026-02-27
+    // @MinMaxDisplay
     //ofx_set_min_value_double(props, control->display_min);
     ofx_set_min_display_double(props, control->display_min);
 
@@ -301,6 +309,7 @@ reset_double_param(
 ) {
   ofx_set_is_secret(props, true);
 
+  // @MinMaxDisplay
   //ofx_set_min_value_double(props, 0);
   ofx_set_min_display_double(props, 0);
 
@@ -373,6 +382,16 @@ load_fixture(
   for (int i = 0; i < MAX_FIXTURE_CHANNELS; i++) {
 
     ofx_set_is_secret(plugin->params[i].write_mask.props, true);
+    ofx_set_is_secret(plugin->params[i].toggle.props, true);
+
+    {
+      // @MinMaxDisplay
+      auto props = plugin->params[i].integer.props;
+      ofx_set_is_secret(props, true);
+      ofx_set_min_display_int(props, 0);
+      ofx_set_max_display_int(props, 1);
+      ofx_set_default_int(props, 0);
+    }
 
     {
       ofx_set_is_secret(plugin->params[i].rgb.props, true);
@@ -394,7 +413,31 @@ load_fixture(
       ofx_set_label(props, control->name);
     }
 
-    if(control->type == Fixture::Control::Type::float_fader) {
+    if (control->type == Fixture::Control::Type::toggle) {
+      channel_watermark = max(channel_watermark, control->channel);
+
+      auto props = plugin->params[i].toggle.props;
+      ofx_set_is_secret(props, false);
+      ofx_set_label(props, control->name);
+    }
+    else if (control->type == Fixture::Control::Type::integer) {
+      channel_watermark = max(channel_watermark, control->channel);
+
+      auto props = plugin->params[i].integer.props;
+      ofx_set_is_secret(props, false);
+      ofx_set_label(props, control->name);
+
+      if (control->has_display_min_max) {
+        // @MinMaxDisplay
+        ofx_set_min_display_int(props, control->display_min);
+        ofx_set_max_display_int(props, control->display_max);
+      }
+
+      if (control->has_default_value) {
+        ofx_set_default_int(props, control->default_value);
+      }
+    }
+    else if(control->type == Fixture::Control::Type::float_fader) {
       channel_watermark = max(channel_watermark , control->channel);
 
       enable_double_param(plugin->params[i].f32_1.props, control->name, control);
@@ -633,6 +676,12 @@ parse_fixture_json(
             else if(str_equal(data, "euler_xyz_16")) {
               control->type = Fixture::Control::Type::euler_xyz_16;
             }
+            else if (str_equal(data, "toggle")) {
+              control->type = Fixture::Control::Type::toggle;
+            }
+            else if (str_equal(data, "integer")) {
+              control->type = Fixture::Control::Type::integer;
+            }
             else {
               jsonr_error(j, "Unknown fixture type %.*s", len, data);
               return;
@@ -802,6 +851,8 @@ init_plugin(
     plugin->params[i].f32_2 = ofx_get_param(PARAM_ID_FLOAT2(i), param_set); \
     plugin->params[i].f32_3 = ofx_get_param(PARAM_ID_FLOAT3(i), param_set); \
     plugin->params[i].write_mask = ofx_get_param(PARAM_ID_WRITE_MASK(i), param_set); \
+    plugin->params[i].toggle= ofx_get_param(PARAM_ID_TOGGLE(i), param_set); \
+    plugin->params[i].integer = ofx_get_param(PARAM_ID_INTEGER(i), param_set); \
   }
 
   LOAD_FIXTURE_GROUP(0)
@@ -1150,19 +1201,19 @@ ofx_main(
       for(int i = 0; i < plugin->fixture.num_controls; i++) {
         auto *control = &plugin->fixture.controls[i];
 
-        int should_write = true;
+        bool should_write = true;
         {
           int value = 1;
           OFX_CHECK(suite_param->paramGetValueAtTime(plugin->params[i].write_mask.handle, time, &value));
           should_write = value != 0;
         }
 
-        if(control->type == Fixture::Control::Type::float_fader) do {
+        if(control->type == Fixture::Control::Type::float_fader) {
           double value = 0;
           OFX_CHECK(suite_param->paramGetValueAtTime(plugin->params[i].f32_1.handle, time, &value));
 
           encode_double_as_8(control->channel, value, control, dmx_buf, mask_buf, buf_size, should_write);
-        } while(0);
+        }
         else if (control->type == Fixture::Control::Type::float_16_fader) {
           get_double_and_encode_as_16(
             control->channel,
@@ -1172,9 +1223,15 @@ ofx_main(
           );
         }
         else if(control->type == Fixture::Control::Type::rgb) do {
-          if(!is_valid_array_index(control->red_channel, buf_size)) break;
-          if(!is_valid_array_index(control->green_channel, buf_size)) break;
-          if(!is_valid_array_index(control->blue_channel, buf_size)) break;
+          if (!is_valid_array_index(control->red_channel, buf_size)) {
+            break;
+          }
+          if (!is_valid_array_index(control->green_channel, buf_size)) {
+            break;
+          }
+          if (!is_valid_array_index(control->blue_channel, buf_size)) {
+            break;
+          }
 
           double r = 0;
           double g = 0;
@@ -1245,6 +1302,21 @@ ofx_main(
             time, control, dmx_buf, mask_buf, buf_size, should_write
           );
         }
+        else if (control->type == Fixture::Control::Type::toggle) {
+          int param_value = 0;
+          OFX_CHECK(suite_param->paramGetValueAtTime(plugin->params[i].toggle.handle, time, &param_value));
+
+          auto is_toggled = param_value != 0;
+          auto write_value = is_toggled ? 1.0 : 0.0;
+
+          encode_double_as_8(control->channel, write_value, control, dmx_buf, mask_buf, buf_size, should_write);
+        }
+        else if (control->type == Fixture::Control::Type::integer) {
+          int param_value = 0;
+          OFX_CHECK(suite_param->paramGetValueAtTime(plugin->params[i].integer.handle, time, &param_value));
+
+          encode_double_as_8(control->channel, param_value, control, dmx_buf, mask_buf, buf_size, should_write);
+          }
         else {
           assert(false);
         }
@@ -1565,12 +1637,36 @@ ofx_main(
         ofx_set_default_bool(param_props, true); \
       }
 
+      #define TOGGLE_CONTROL(i, id) { \
+        OFX_CHECK(suite_param->paramDefine(params_set, kOfxParamTypeBoolean, id, &param_props)); \
+        ofx_set_label(param_props, "Toggle " id); \
+        ofx_set_animates(param_props, true); \
+        ofx_set_evaluate_on_change(param_props, true); \
+        ofx_set_is_secret(param_props, true); \
+        ofx_set_group(param_props, GROUP_FIXTURE); \
+      }
+
+      #define INTEGER_CONTROL(i, id) { \
+        OFX_CHECK(suite_param->paramDefine(params_set, kOfxParamTypeInteger, id, &param_props)); \
+        ofx_set_label(param_props, "Integer " id); \
+        /*ofx_set_min_value_double(param_props, 0);*/ \
+        ofx_set_min_display_int(param_props, 0); \
+        /*ofx_set_max_value_double(param_props, 1);*/ \
+        ofx_set_max_display_int(param_props, 1); \
+        ofx_set_animates(param_props, true); \
+        ofx_set_evaluate_on_change(param_props, true); \
+        ofx_set_is_secret(param_props, true); \
+        ofx_set_group(param_props, GROUP_FIXTURE); \
+      }
+
       #define FIXTURE_GROUP(i) \
         RGB_FIXTURE(i) \
         FLOAT_FIXTURE(i, PARAM_ID_FLOAT1(i)) \
         FLOAT_FIXTURE(i, PARAM_ID_FLOAT2(i)) \
         FLOAT_FIXTURE(i, PARAM_ID_FLOAT3(i)) \
-        WRITE_MASK(i, PARAM_ID_WRITE_MASK(i))
+        WRITE_MASK(i, PARAM_ID_WRITE_MASK(i)) \
+        TOGGLE_CONTROL(i, PARAM_ID_TOGGLE(i)) \
+        INTEGER_CONTROL(i, PARAM_ID_INTEGER(i)) \
 
       FIXTURE_GROUP(0)
       FIXTURE_GROUP(1)
