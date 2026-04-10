@@ -1,0 +1,37 @@
+{
+  "id" : "SF3 - Skybox Extension - 2026 V1",
+  "default_dmx_universe": 6,
+  "default_dmx_channel": 267,
+
+  "controls": [
+    { 
+      "name": "Celestial Body Selector", 
+      "type": "float", 
+      "channel": 1,
+      "display_min": 0,
+      "display_max": 64
+    },
+
+    { 
+      "name": "Celestial Body Azimuth", 
+      "type": "float_16", 
+      "channel": 2,
+      "display_min": -180,
+      "display_max": 180
+    },
+
+    { 
+      "name": "Celestial Body Polar", 
+      "type": "float_16", 
+      "channel": 4,
+      "display_min": -180,
+      "display_max": 180
+    },
+
+    { 
+      "name": "Celestial Body Size", 
+      "type": "float", 
+      "channel": 6
+    }
+  ]
+}
