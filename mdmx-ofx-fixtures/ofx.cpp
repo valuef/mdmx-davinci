@@ -65,7 +65,7 @@ extern "C" void blit_dmx_line(
   #define PLUGIN_NAME PLUGIN_BASE_NAME
 #else
   #define PLUGIN_MAJOR 1
-  #define PLUGIN_MINOR 4
+  #define PLUGIN_MINOR 5
 
   #define PLUGIN_BASE_NAME "MDMX Fixture"
   #define PLUGIN_ID_BASE "gay.value.mdmx_fixture"
@@ -506,7 +506,7 @@ load_fixture(
     //ofx_set_min_value_int(plugin->p_dmx_fixture_index.props, 1);
     //ofx_set_max_value_int(plugin->p_dmx_fixture_index.props, fixture.num_fixtures_in_sequence);
 
-    OFX_CHECK(suite_param->paramSetValue(plugin->p_dmx_fixture_index.handle, 1));
+    //OFX_CHECK(suite_param->paramSetValue(plugin->p_dmx_fixture_index.handle, 1));
 
     ofx_set_is_secret(plugin->p_dmx_fixture_index.props, false);
   }
