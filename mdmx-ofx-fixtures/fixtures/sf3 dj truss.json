@@ -1,0 +1,16 @@
+{
+  "id" : "SF3 - DJ Truss - 2025 V1",
+
+  "default_dmx_universe": 3,
+  "default_dmx_channel": 323,
+
+  "controls": [
+    { 
+      "name": "DJ Truss Position", 
+      "type": "integer", 
+      "channel": 1,
+      "display_min": 0,
+      "display_max": 255
+    }
+  ]
+}
