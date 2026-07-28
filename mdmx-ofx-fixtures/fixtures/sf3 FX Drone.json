@@ -1,5 +1,11 @@
 {
   "id" : "SF3 - SF Drone - 2025 V1",
+
+  "default_dmx_universe": 6,
+  "default_dmx_channel": 41,
+  
+  "num_fixtures_in_sequence": 16,
+
   "controls": [
     { 
       "name": "Position", 
@@ -44,7 +50,7 @@
 
     { 
       "name": "FX Trigger", 
-      "type": "float", 
+      "type": "integer", 
       "channel": 10,
 
       "display_min": 0,
