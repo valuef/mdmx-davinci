@@ -80,6 +80,10 @@
 
     { "name": "Random",         "type": "float", "channel": 13 },
     { "name": "Billboard Dir",  "type": "float", "channel": 14 },
-    { "name": "Random (2)",     "type": "float", "channel": 15 }
+    { "name": "Random (2)",     "type": "float", "channel": 15 },
+
+    { "name": "Size Mod",       "type": "float", "channel": 16 },
+    { "name": "Speed Mod",      "type": "float", "channel": 17 },
+    { "name": "Force Snap",     "type": "float", "channel": 18 }
   ]
 }
