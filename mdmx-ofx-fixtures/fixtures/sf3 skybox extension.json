@@ -16,6 +16,7 @@
       "name": "Celestial Body Azimuth", 
       "type": "float_16", 
       "channel": 2,
+      "channel_fine": 3,
       "display_min": -180,
       "display_max": 180
     },
@@ -24,6 +25,7 @@
       "name": "Celestial Body Polar", 
       "type": "float_16", 
       "channel": 4,
+      "channel_fine": 5,
       "display_min": -180,
       "display_max": 180
     },
