@@ -1,0 +1,10 @@
+{
+  "id" : "SF3 - FX Volume Mute - 2025 V1",
+
+  "default_dmx_universe": 6,
+  "default_dmx_channel": 38,
+
+  "controls": [
+    { "name": "Mute", "type": "float", "channel": 1 }
+  ]
+}

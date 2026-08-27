@@ -6,7 +6,14 @@
   "controls": [
     { "name": "Enable", "type": "float", "channel": 1 },
 
-    { "name": "Enable Drone Map", "type": "float", "channel": 3 },
+    { 
+      "name": "Enable Drone Map", 
+      "type": "integer", 
+      "channel": 3,
+      "display_min": 0,
+      "display_max": 255
+    },
+
     { "name": "Delete World", "type": "float", "channel": 4 },
 
     { 
